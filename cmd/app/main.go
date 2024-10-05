@@ -1,4 +1,4 @@
-package app
+package main
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"rest-api-crud/internal/config"
 	"rest-api-crud/internal/delivery/http/v1"
-	"rest-api-crud/internal/domain"
 	mongodb2 "rest-api-crud/internal/repository"
 	"rest-api-crud/pkg/database/mongodb"
 	"rest-api-crud/pkg/logging"
@@ -32,58 +31,12 @@ func main() {
 	}
 	storage := mongodb2.NewStorage(mongodbClient, cfg.MongoDB.Collection, logger)
 
-	u := domain.User{
-		Username:     "eboy",
-		Email:        "ex@gmail.com",
-		PasswordHash: "1234",
-	}
-	userID, err := storage.Create(context.Background(), u)
-	if err != nil {
-		return
-	}
-	logger.Info(userID)
-
-	u2 := domain.User{
-		Email:        "yar@hair.hor",
-		Username:     "hi",
-		PasswordHash: "1234",
-	}
-	u2ID, err := storage.Create(context.Background(), u2)
-	if err != nil {
-		panic(err)
-	}
-	logger.Info(u2ID)
-
-	userModel, err := storage.FindById(context.Background(), u2ID)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(userModel)
-
-	userModel.Email = "emaillllll@here.ok"
-	err = storage.Update(context.Background(), userModel)
-	if err != nil {
-		panic(err)
-	}
-	userModel, err = storage.FindById(context.Background(), u2ID)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(userModel)
-
-	err = storage.DeleteById(context.Background(), u2ID)
-	if err != nil {
-		return
-	}
-
-	_, err = storage.FindById(context.Background(), u2ID)
-	if err != nil {
-		panic(err)
-	}
+	users, err := storage.FindAll(context.Background())
+	fmt.Println(users)
 
 	router := httprouter.New()
-	handler := v1.NewHandler(logger)
-	handler.Register(router)
+	handlers := v1.NewHandler(logger)
+	handlers.Register(router)
 	logger.Info("Handlers successfully registered in http router")
 
 	start(router, cfg)

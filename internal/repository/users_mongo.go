@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -10,12 +9,16 @@ import (
 	"rest-api-crud/pkg/logging"
 )
 
+const (
+	notFound = "not found"
+)
+
 type db struct {
 	collection *mongo.Collection
 	logger     *logging.Logger
 }
 
-func (d db) Create(ctx context.Context, user domain.User) (string, error) {
+func (d *db) Create(ctx context.Context, user domain.User) (string, error) {
 	result, err := d.collection.InsertOne(ctx, user)
 	if err != nil {
 		return "", fmt.Errorf("failed to create user due to error %v", err)
@@ -30,7 +33,7 @@ func (d db) Create(ctx context.Context, user domain.User) (string, error) {
 	return "", fmt.Errorf("failed to convert objectID to hex")
 }
 
-func (d db) FindById(ctx context.Context, id string) (u domain.User, err error) {
+func (d *db) FindById(ctx context.Context, id string) (u domain.User, err error) {
 	oid, err := bson.ObjectIDFromHex(id)
 	if err != nil {
 		return u, fmt.Errorf("failed to convert hex to objectID")
@@ -51,16 +54,20 @@ func (d db) FindById(ctx context.Context, id string) (u domain.User, err error) 
 	return u, nil
 }
 
-func (d db) FindAll(ctx context.Context) ([]domain.User, error) {
-	result, err := d.collection.Find(ctx, nil)
-	if result.Err() != nil {
-		if errors.Is(result.Err(), mongo.ErrNoDocuments) {
-
-		}
+func (d *db) FindAll(ctx context.Context) (u []domain.User, err error) {
+	cursor, err := d.collection.Find(ctx, bson.M{})
+	if cursor.Err() != nil {
+		return u, fmt.Errorf("failed to find all users due to error: %v", err)
 	}
+
+	if err = cursor.All(ctx, &u); err != nil {
+		return u, fmt.Errorf("failed to read all documents from cursor. error : %v", err)
+	}
+
+	return u, nil
 }
 
-func (d db) Update(ctx context.Context, user domain.User) error {
+func (d *db) Update(ctx context.Context, user domain.User) error {
 	id, ok := user.ID.(bson.ObjectID)
 	if !ok {
 		return fmt.Errorf("failed to convert user ID field to bson.ObjectID")
@@ -97,7 +104,7 @@ func (d db) Update(ctx context.Context, user domain.User) error {
 
 	if result.MatchedCount == 0 {
 		// todo ErrEntityNotFound
-		return fmt.Errorf("not found")
+		return fmt.Errorf(notFound)
 	}
 
 	d.logger.Tracef("Matched %d documents and Modified %d documents", result.MatchedCount, result.ModifiedCount)
@@ -105,7 +112,7 @@ func (d db) Update(ctx context.Context, user domain.User) error {
 	return nil
 }
 
-func (d db) DeleteById(ctx context.Context, id string) error {
+func (d *db) DeleteById(ctx context.Context, id string) error {
 	oid, err := bson.ObjectIDFromHex(id)
 	if err != nil {
 		return fmt.Errorf("failed to convert user ID to ObjectID. ID = %s", id)
@@ -119,7 +126,7 @@ func (d db) DeleteById(ctx context.Context, id string) error {
 	}
 
 	if result.DeletedCount == 0 {
-		return fmt.Errorf("not found")
+		return fmt.Errorf(notFound)
 	}
 
 	d.logger.Tracef("Deleted %d documents", result.DeletedCount)
