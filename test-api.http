@@ -1,0 +1,41 @@
+GET localhost:1234/users
+Content-Type: application/json
+
+{}
+
+###
+
+GET localhost:1234/users/1
+Content-Type: application/json
+
+{}
+
+###
+
+POST localhost:1234/users
+Content-Type: application/json
+
+{}
+
+###
+
+PUT localhost:1234/users/1
+Content-Type: application/json
+
+{}
+
+###
+
+PATCH localhost:1234/users/1
+Content-Type: application/json
+
+{}
+
+###
+
+DELETE localhost:1234/users/1
+Content-Type: application/json
+
+{}
+
+###
