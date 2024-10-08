@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"net"
@@ -11,28 +10,13 @@ import (
 	"path/filepath"
 	"rest-api-crud/internal/config"
 	"rest-api-crud/internal/delivery/http/v1"
-	mongodb2 "rest-api-crud/internal/repository"
-	"rest-api-crud/pkg/database/mongodb"
 	"rest-api-crud/pkg/logging"
 	"time"
 )
 
 func main() {
 	logger := logging.GetLogger()
-
 	cfg := config.GetConfig()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	mongodbClient, err := mongodb.NewClient(ctx, cfg.MongoDB.Host, cfg.MongoDB.Port,
-		cfg.MongoDB.Username, cfg.MongoDB.Password, cfg.MongoDB.Database, cfg.MongoDB.AuthDB)
-	if err != nil {
-		panic(err)
-	}
-	storage := mongodb2.NewStorage(mongodbClient, cfg.MongoDB.Collection, logger)
-
-	users, err := storage.FindAll(context.Background())
-	fmt.Println(users)
 
 	router := httprouter.New()
 	handlers := v1.NewHandler(logger)
@@ -54,7 +38,7 @@ func start(router *httprouter.Router, cfg *config.Config) {
 			logger.Fatal(err)
 		}
 
-		socketPath := path.Join(appDir, "app.sock")
+		socketPath := path.Join(appDir, "apа.sock")
 
 		listener, listenErr = net.Listen("unix", socketPath)
 	} else {
@@ -64,7 +48,7 @@ func start(router *httprouter.Router, cfg *config.Config) {
 	}
 
 	if listenErr != nil {
-		logger.Fatal(listenErr)
+		logger.Fatalf("Error happend while creating http server: %v", listenErr)
 	}
 	logger.Infof("Listener with type -> %s <- created successfully", cfg.Listen.Type)
 

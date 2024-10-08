@@ -2,6 +2,7 @@ package v1
 
 import (
 	"github.com/julienschmidt/httprouter"
+	"net/http"
 	httpHandler "rest-api-crud/internal/delivery/http"
 	"rest-api-crud/pkg/logging"
 )
@@ -20,10 +21,10 @@ func NewHandler(logger *logging.Logger) httpHandler.Handler {
 }
 
 func (h *handler) Register(router *httprouter.Router) {
-	router.GET(usersURL, h.GetList)
-	router.POST(usersURL, h.CreateUser)
-	router.GET(userURL, h.GetUserByUUID)
-	router.PUT(userURL, h.UpdateUser)
-	router.PATCH(userURL, h.PartiallyUpdateUser)
-	router.DELETE(userURL, h.DeleteUser)
+	router.HandlerFunc(http.MethodGet, usersURL, httpHandler.Middleware(h.GetList))
+	router.HandlerFunc(http.MethodPost, usersURL, httpHandler.Middleware(h.CreateUser))
+	router.HandlerFunc(http.MethodGet, userURL, httpHandler.Middleware(h.GetUserByUUID))
+	router.HandlerFunc(http.MethodPut, userURL, httpHandler.Middleware(h.UpdateUser))
+	router.HandlerFunc(http.MethodPatch, userURL, httpHandler.Middleware(h.PartiallyUpdateUser))
+	router.HandlerFunc(http.MethodDelete, userURL, httpHandler.Middleware(h.DeleteUser))
 }
