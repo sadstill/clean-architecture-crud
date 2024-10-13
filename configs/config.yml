@@ -9,7 +9,15 @@ mongodb:
   host: localhost
   port: 27017
   database: user-service
-  auth_db:
-  username:
-  password:
   collection: users
+
+postgres:
+  host: localhost
+  port: 5460
+  database: postgres
+  username: postgres
+  password: postgres
+  conn_retry_attempts: 5
+  conn_retry_delay: 5
+
+

@@ -3,30 +3,30 @@ package http
 import (
 	"errors"
 	"net/http"
-	"rest-api-crud/internal/apperror"
+	"rest-api-crud/internal/model"
 )
 
 type appHandler func(w http.ResponseWriter, r *http.Request) error
 
 func Middleware(h appHandler) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		var appError *apperror.Error
+		var appError *model.Error
 		err := h(writer, request)
 		if err != nil {
 			writer.Header().Set("Content-Type", "application/json")
 			if errors.As(err, &appError) {
-				if errors.Is(err, apperror.NotFound) {
+				if errors.Is(err, model.NotFound) {
 					writer.WriteHeader(http.StatusNotFound)
-					writer.Write(apperror.NotFound.Marshal())
+					writer.Write(model.NotFound.Marshal())
 					return
 				}
 				writer.WriteHeader(http.StatusBadRequest)
-				writer.Write(apperror.BadRequest.Marshal())
+				writer.Write(model.BadRequest.Marshal())
 				return
 			}
 
 			writer.WriteHeader(http.StatusTeapot)
-			writer.Write(apperror.Wrap(err).Marshal())
+			writer.Write(model.Wrap(err).Marshal())
 		}
 	}
 }

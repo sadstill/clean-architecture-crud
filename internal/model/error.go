@@ -1,10 +1,10 @@
-package apperror
+package model
 
 import "encoding/json"
 
 var (
 	BadRequest = New(nil, "bad request", "", "BAD_REQUEST")
-	NotFound   = New(nil, "not found", "", "MONGO_ERROR")
+	NotFound   = New(nil, "not found", "", "NOT_FOUND")
 )
 
 type Error struct {

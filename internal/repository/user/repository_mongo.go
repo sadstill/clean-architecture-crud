@@ -1,4 +1,4 @@
-package repository
+package user
 
 import (
 	"context"
@@ -6,17 +6,26 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"rest-api-crud/internal/apperror"
-	"rest-api-crud/internal/domain"
+	"rest-api-crud/internal/model"
+	"rest-api-crud/internal/repository"
 	"rest-api-crud/pkg/logging"
 )
+
+var _ repository.UserRepository = (*db)(nil)
 
 type db struct {
 	collection *mongo.Collection
 	logger     *logging.Logger
 }
 
-func (d *db) Create(ctx context.Context, user domain.User) (string, error) {
+func NewStorage(database *mongo.Database, collection string, logger *logging.Logger) repository.UserRepository {
+	return &db{
+		collection: database.Collection(collection),
+		logger:     logger,
+	}
+}
+
+func (d *db) Create(ctx context.Context, user UserMongo) (string, error) {
 	result, err := d.collection.InsertOne(ctx, user)
 	if err != nil {
 		return "", fmt.Errorf("failed to create user due to apperror %v", err)
@@ -31,7 +40,7 @@ func (d *db) Create(ctx context.Context, user domain.User) (string, error) {
 	return "", fmt.Errorf("failed to convert objectID to hex")
 }
 
-func (d *db) FindById(ctx context.Context, id string) (u domain.User, err error) {
+func (d *db) FindById(ctx context.Context, id string) (u UserMongo, err error) {
 	oid, err := bson.ObjectIDFromHex(id)
 	if err != nil {
 		return u, fmt.Errorf("failed to convert hex to objectID")
@@ -42,7 +51,7 @@ func (d *db) FindById(ctx context.Context, id string) (u domain.User, err error)
 	result := d.collection.FindOne(ctx, filter)
 	if result.Err() != nil {
 		if errors.Is(result.Err(), mongo.ErrNoDocuments) {
-			return u, apperror.NotFound
+			return u, model.NotFound
 		}
 		return u, fmt.Errorf("failed to find user by id: %s due to err %s", id, result.Err())
 	}
@@ -54,7 +63,7 @@ func (d *db) FindById(ctx context.Context, id string) (u domain.User, err error)
 	return u, nil
 }
 
-func (d *db) FindAll(ctx context.Context) (u []domain.User, err error) {
+func (d *db) FindAll(ctx context.Context) (u []UserMongo, err error) {
 	cursor, err := d.collection.Find(ctx, bson.M{})
 	if cursor.Err() != nil {
 		return u, fmt.Errorf("failed to find all users due to apperror: %v", err)
@@ -67,13 +76,8 @@ func (d *db) FindAll(ctx context.Context) (u []domain.User, err error) {
 	return u, nil
 }
 
-func (d *db) Update(ctx context.Context, user domain.User) error {
-	id, ok := user.ID.(bson.ObjectID)
-	if !ok {
-		return fmt.Errorf("failed to convert user ID field to bson.ObjectID")
-	}
-
-	oid, err := bson.ObjectIDFromHex(id.Hex())
+func (d *db) Update(ctx context.Context, user UserMongo) error {
+	oid, err := bson.ObjectIDFromHex(user.ID.Hex())
 	if err != nil {
 		return fmt.Errorf("failed to convert userID to ObjectID, ID = %s", user.ID)
 	}
@@ -103,7 +107,7 @@ func (d *db) Update(ctx context.Context, user domain.User) error {
 	}
 
 	if result.MatchedCount == 0 {
-		return apperror.NotFound
+		return model.NotFound
 	}
 
 	d.logger.Tracef("Matched %d documents and Modified %d documents", result.MatchedCount, result.ModifiedCount)
@@ -125,17 +129,10 @@ func (d *db) DeleteById(ctx context.Context, id string) error {
 	}
 
 	if result.DeletedCount == 0 {
-		return apperror.NotFound
+		return model.NotFound
 	}
 
 	d.logger.Tracef("Deleted %d documents", result.DeletedCount)
 
 	return nil
-}
-
-func NewStorage(database *mongo.Database, collection string, logger *logging.Logger) Users {
-	return &db{
-		collection: database.Collection(collection),
-		logger:     logger,
-	}
 }
