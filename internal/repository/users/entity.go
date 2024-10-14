@@ -1,4 +1,4 @@
-package user
+package users
 
 import "go.mongodb.org/mongo-driver/v2/bson"
 

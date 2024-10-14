@@ -3,8 +3,9 @@ package model
 import "encoding/json"
 
 var (
-	BadRequest = New(nil, "bad request", "", "BAD_REQUEST")
-	NotFound   = New(nil, "not found", "", "NOT_FOUND")
+	BadRequest    = New(nil, "bad request", "", "ERROR_BAD_REQUEST")
+	NotFound      = New(nil, "not found", "", "ERROR_NOT_FOUND")
+	InternalError = New(nil, "internal server error", "", "ERROR_WHILE_PROCESSING_REQUEST")
 )
 
 type Error struct {

@@ -12,7 +12,7 @@ func (h *handler) GetList(w http.ResponseWriter, r *http.Request) error {
 
 func (h *handler) GetUserByUUID(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(200)
-	w.Write([]byte("this is get user by uuid"))
+	w.Write([]byte("this is get users by uuid"))
 	return nil
 }
 
@@ -22,18 +22,18 @@ func (h *handler) CreateUser(w http.ResponseWriter, r *http.Request) error {
 
 func (h *handler) UpdateUser(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(204)
-	w.Write([]byte("this is update user"))
+	w.Write([]byte("this is update users"))
 	return nil
 }
 
 func (h *handler) PartiallyUpdateUser(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(204)
-	w.Write([]byte("this is partially update user"))
+	w.Write([]byte("this is partially update users"))
 	return nil
 }
 
 func (h *handler) DeleteUser(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(204)
-	w.Write([]byte("this is delete user"))
+	w.Write([]byte("this is delete users"))
 	return nil
 }

@@ -1,4 +1,4 @@
-package user
+package users
 
 import (
 	"context"
@@ -28,7 +28,7 @@ func NewStorage(database *mongo.Database, collection string, logger *logging.Log
 func (d *db) Create(ctx context.Context, user UserMongo) (string, error) {
 	result, err := d.collection.InsertOne(ctx, user)
 	if err != nil {
-		return "", fmt.Errorf("failed to create user due to apperror %v", err)
+		return "", fmt.Errorf("failed to create users due to apperror %v", err)
 	}
 
 	d.logger.Debug("Converting InsertId to ObjectId")
@@ -53,11 +53,11 @@ func (d *db) FindById(ctx context.Context, id string) (u UserMongo, err error) {
 		if errors.Is(result.Err(), mongo.ErrNoDocuments) {
 			return u, model.NotFound
 		}
-		return u, fmt.Errorf("failed to find user by id: %s due to err %s", id, result.Err())
+		return u, fmt.Errorf("failed to find users by id: %s due to err %s", id, result.Err())
 	}
 
 	if err = result.Decode(&u); err != nil {
-		return u, fmt.Errorf("failed to decode user from DB due to apperror: %v", err)
+		return u, fmt.Errorf("failed to decode users from DB due to apperror: %v", err)
 	}
 
 	return u, nil
@@ -86,13 +86,13 @@ func (d *db) Update(ctx context.Context, user UserMongo) error {
 
 	userBytes, err := bson.Marshal(user)
 	if err != nil {
-		return fmt.Errorf("failed to marshal user, apperror : %v", err)
+		return fmt.Errorf("failed to marshal users, apperror : %v", err)
 	}
 
 	var updatedUserObj bson.M
 	err = bson.Unmarshal(userBytes, &updatedUserObj)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshall user bytes, apperror : %v", err)
+		return fmt.Errorf("failed to unmarshall users bytes, apperror : %v", err)
 	}
 
 	delete(updatedUserObj, "_id")
@@ -103,7 +103,7 @@ func (d *db) Update(ctx context.Context, user UserMongo) error {
 
 	result, err := d.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return fmt.Errorf("failed to execute update user query. apperror: %v", err)
+		return fmt.Errorf("failed to execute update users query. apperror: %v", err)
 	}
 
 	if result.MatchedCount == 0 {
@@ -118,7 +118,7 @@ func (d *db) Update(ctx context.Context, user UserMongo) error {
 func (d *db) DeleteById(ctx context.Context, id string) error {
 	oid, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return fmt.Errorf("failed to convert user ID to ObjectID. ID = %s", id)
+		return fmt.Errorf("failed to convert users ID to ObjectID. ID = %s", id)
 	}
 
 	filter := bson.M{"_id": oid}
