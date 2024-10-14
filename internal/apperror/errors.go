@@ -1,11 +1,10 @@
-package model
+package apperror
 
 import "encoding/json"
 
 var (
-	BadRequest    = New(nil, "bad request", "", "ERROR_BAD_REQUEST")
-	NotFound      = New(nil, "not found", "", "ERROR_NOT_FOUND")
-	InternalError = New(nil, "internal server error", "", "ERROR_WHILE_PROCESSING_REQUEST")
+	BadRequest = New(nil, "bad request", "", "ERROR_BAD_REQUEST")
+	NotFound   = New(nil, "not found", "", "ERROR_NOT_FOUND")
 )
 
 type Error struct {

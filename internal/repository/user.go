@@ -1,4 +1,4 @@
-package users
+package repository
 
 import (
 	"context"
@@ -6,41 +6,48 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"rest-api-crud/internal/apperror"
+	"rest-api-crud/internal/converter"
 	"rest-api-crud/internal/model"
-	"rest-api-crud/internal/repository"
+	"rest-api-crud/internal/storage"
 	"rest-api-crud/pkg/logging"
 )
 
-var _ repository.UserRepository = (*db)(nil)
+var _ UserRepository = (*userRepo)(nil)
 
-type db struct {
+type userRepo struct {
 	collection *mongo.Collection
 	logger     *logging.Logger
 }
 
-func NewStorage(database *mongo.Database, collection string, logger *logging.Logger) repository.UserRepository {
-	return &db{
+func NewUserRepo(database *mongo.Database, collection string, logger *logging.Logger) UserRepository {
+	return &userRepo{
 		collection: database.Collection(collection),
 		logger:     logger,
 	}
 }
 
-func (d *db) Create(ctx context.Context, user UserMongo) (string, error) {
-	result, err := d.collection.InsertOne(ctx, user)
+func (r *userRepo) Create(ctx context.Context, user model.User) (string, error) {
+	userMongo, err := converter.ToUserMongo(user)
+	if err != nil {
+		return "", err
+	}
+
+	result, err := r.collection.InsertOne(ctx, userMongo)
 	if err != nil {
 		return "", fmt.Errorf("failed to create users due to apperror %v", err)
 	}
 
-	d.logger.Debug("Converting InsertId to ObjectId")
+	r.logger.Debug("Converting InsertId to ObjectId")
 	oid, ok := result.InsertedID.(bson.ObjectID)
 	if ok {
 		return oid.Hex(), nil
 	}
-	d.logger.Trace(user)
+	r.logger.Trace(user)
 	return "", fmt.Errorf("failed to convert objectID to hex")
 }
 
-func (d *db) FindById(ctx context.Context, id string) (u UserMongo, err error) {
+func (r *userRepo) FindById(ctx context.Context, id string) (u model.User, err error) {
 	oid, err := bson.ObjectIDFromHex(id)
 	if err != nil {
 		return u, fmt.Errorf("failed to convert hex to objectID")
@@ -48,43 +55,47 @@ func (d *db) FindById(ctx context.Context, id string) (u UserMongo, err error) {
 
 	filter := bson.M{"_id": oid}
 
-	result := d.collection.FindOne(ctx, filter)
+	result := r.collection.FindOne(ctx, filter)
 	if result.Err() != nil {
 		if errors.Is(result.Err(), mongo.ErrNoDocuments) {
-			return u, model.NotFound
+			return u, apperror.NotFound
 		}
 		return u, fmt.Errorf("failed to find users by id: %s due to err %s", id, result.Err())
 	}
 
-	if err = result.Decode(&u); err != nil {
+	var userMongo *storage.UserMongo
+	if err = result.Decode(&userMongo); err != nil {
 		return u, fmt.Errorf("failed to decode users from DB due to apperror: %v", err)
 	}
+
+	u = converter.ToUser(*userMongo)
 
 	return u, nil
 }
 
-func (d *db) FindAll(ctx context.Context) (u []UserMongo, err error) {
-	cursor, err := d.collection.Find(ctx, bson.M{})
+func (r *userRepo) FindAll(ctx context.Context) (u []model.User, err error) {
+	cursor, err := r.collection.Find(ctx, bson.M{})
 	if cursor.Err() != nil {
 		return u, fmt.Errorf("failed to find all users due to apperror: %v", err)
 	}
 
-	if err = cursor.All(ctx, &u); err != nil {
+	var mongoUsers *[]storage.UserMongo
+	if err = cursor.All(ctx, &mongoUsers); err != nil {
 		return u, fmt.Errorf("failed to read all documents from cursor. apperror : %v", err)
 	}
+
+	u = converter.ToUserSlice(*mongoUsers)
 
 	return u, nil
 }
 
-func (d *db) Update(ctx context.Context, user UserMongo) error {
-	oid, err := bson.ObjectIDFromHex(user.ID.Hex())
+func (r *userRepo) Update(ctx context.Context, user model.User) error {
+	userMongo, err := converter.ToUserMongo(user)
 	if err != nil {
-		return fmt.Errorf("failed to convert userID to ObjectID, ID = %s", user.ID)
+		return err
 	}
 
-	filter := bson.M{"_id": oid}
-
-	userBytes, err := bson.Marshal(user)
+	userBytes, err := bson.Marshal(userMongo)
 	if err != nil {
 		return fmt.Errorf("failed to marshal users, apperror : %v", err)
 	}
@@ -97,25 +108,24 @@ func (d *db) Update(ctx context.Context, user UserMongo) error {
 
 	delete(updatedUserObj, "_id")
 
-	update := bson.M{
-		"$set": updatedUserObj,
-	}
+	filter := bson.M{"_id": userMongo.ID}
+	update := bson.M{"$set": updatedUserObj}
 
-	result, err := d.collection.UpdateOne(ctx, filter, update)
+	result, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return fmt.Errorf("failed to execute update users query. apperror: %v", err)
 	}
 
 	if result.MatchedCount == 0 {
-		return model.NotFound
+		return apperror.NotFound
 	}
 
-	d.logger.Tracef("Matched %d documents and Modified %d documents", result.MatchedCount, result.ModifiedCount)
+	r.logger.Tracef("Matched %d documents and Modified %d documents", result.MatchedCount, result.ModifiedCount)
 
 	return nil
 }
 
-func (d *db) DeleteById(ctx context.Context, id string) error {
+func (r *userRepo) DeleteById(ctx context.Context, id string) error {
 	oid, err := bson.ObjectIDFromHex(id)
 	if err != nil {
 		return fmt.Errorf("failed to convert users ID to ObjectID. ID = %s", id)
@@ -123,16 +133,16 @@ func (d *db) DeleteById(ctx context.Context, id string) error {
 
 	filter := bson.M{"_id": oid}
 
-	result, err := d.collection.DeleteOne(ctx, filter)
+	result, err := r.collection.DeleteOne(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to execute query. apperror: %v", err)
 	}
 
 	if result.DeletedCount == 0 {
-		return model.NotFound
+		return apperror.NotFound
 	}
 
-	d.logger.Tracef("Deleted %d documents", result.DeletedCount)
+	r.logger.Tracef("Deleted %d documents", result.DeletedCount)
 
 	return nil
 }

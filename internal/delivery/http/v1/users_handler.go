@@ -3,11 +3,11 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"rest-api-crud/internal/model"
+	"rest-api-crud/internal/apperror"
 )
 
 func (h *handler) GetList(w http.ResponseWriter, r *http.Request) error {
-	return model.NotFound
+	return apperror.NotFound
 }
 
 func (h *handler) GetUserByUUID(w http.ResponseWriter, r *http.Request) error {

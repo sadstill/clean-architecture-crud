@@ -7,7 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func NewClient(ctx context.Context, host, port, username, password, database, authDB string) (db *mongo.Database, err error) {
+func New(ctx context.Context, host, port, username, password, database, authDB string) (db *mongo.Database, err error) {
 	var mongodbURL string
 	var isAuth bool
 	if username == "" && password == "" {

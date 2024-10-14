@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"rest-api-crud/internal/config"
-	"rest-api-crud/pkg/util"
+	"rest-api-crud/pkg/utils"
 	"time"
 )
 
@@ -18,10 +18,10 @@ type Client interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
-func NewClient(ctx context.Context, cfg config.PostgresConfig) (pool *pgxpool.Pool, err error) {
+func New(ctx context.Context, cfg config.PostgresConfig) (pool *pgxpool.Pool, err error) {
 	dsn := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
 
-	err = util.DoWithRetries(func() error {
+	err = utils.DoWithRetries(func() error {
 		attemptCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
