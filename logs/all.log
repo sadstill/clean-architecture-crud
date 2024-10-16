@@ -1,1 +1,0 @@
-time="2024-10-01T21:48:53+03:00" level=info msg="Listen type \"port\" received from config.yml <---- Creating tcp listener on port 1234 ---->"

@@ -32,7 +32,7 @@ func start(router *httprouter.Router, cfg *config.Config) {
 	var listener net.Listener
 	var listenErr error
 	if cfg.Listen.Type == "sock" {
-		logger.Info(`Listen type -> sock <- received from config.yml <---- Creating unix socket listener ---->`)
+		logger.Info(`Listen type - "sock" received from config.yml ---- Creating unix socket listener ----`)
 		appDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 		if err != nil {
 			logger.Fatal(err)

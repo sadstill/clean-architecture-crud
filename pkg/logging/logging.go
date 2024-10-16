@@ -1,74 +1,39 @@
 package logging
 
 import (
-	"fmt"
-	"github.com/sirupsen/logrus"
-	"io"
+	"log/slog"
 	"os"
-	"path"
-	"runtime"
+	"strings"
 )
 
-type writerHook struct {
-	Writer    []io.Writer
-	LogLevels []logrus.Level
+var logger *slog.Logger
+
+func GetLogger() *slog.Logger {
+	return logger
 }
 
-func (hook *writerHook) Fire(entry *logrus.Entry) error {
-	line, err := entry.String()
-	if err != nil {
-		return err
-	}
+func SetupLogger(logLevel string) {
+	level := parseLogLevel(logLevel)
 
-	for _, w := range hook.Writer {
-		w.Write([]byte(line))
-	}
-	return err
+	handler := slogpretty.NewPrettyHandler(os.Stdout)
+	handler.SetLevel(level)
+
+	logger = slog.New(handler)
 }
 
-func (hook *writerHook) Levels() []logrus.Level {
-	return hook.LogLevels
-}
-
-var e *logrus.Entry
-
-type Logger struct {
-	*logrus.Entry
-}
-
-func GetLogger() *Logger {
-	return &Logger{e}
-}
-
-func init() {
-	logger := logrus.New()
-	logger.SetReportCaller(true)
-	logger.Formatter = &logrus.TextFormatter{
-		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
-			filename := path.Base(frame.File)
-			return fmt.Sprintf("%s()", frame.Function), fmt.Sprintf("%s:%d", filename, frame.Line)
-		},
-		DisableColors: true,
-		FullTimestamp: true,
+func parseLogLevel(level string) slog.Level {
+	switch strings.ToLower(level) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	case "fatal":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
-
-	if err := os.Mkdir("logs", 0755); err != nil && !os.IsExist(err) {
-		panic(err)
-	}
-
-	file, err := os.OpenFile("logs/all.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640)
-	if err != nil {
-		panic(err)
-	}
-
-	logrus.SetOutput(io.Discard)
-
-	logrus.AddHook(&writerHook{
-		Writer:    []io.Writer{file, os.Stdout},
-		LogLevels: logrus.AllLevels,
-	})
-
-	logrus.SetLevel(logrus.TraceLevel)
-
-	e = logrus.NewEntry(logger)
 }
