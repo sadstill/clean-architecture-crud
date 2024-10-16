@@ -7,7 +7,7 @@ import (
 	"rest-api-crud/internal/storage"
 )
 
-func ToUser(userMongo storage.UserMongo) model.User {
+func ToModelUser(userMongo storage.User) model.User {
 	return model.User{
 		ID:       userMongo.ID.Hex(),
 		Username: userMongo.Username,
@@ -15,24 +15,24 @@ func ToUser(userMongo storage.UserMongo) model.User {
 	}
 }
 
-func ToUserMongo(user model.User) (storage.UserMongo, error) {
+func ToStorageUser(user model.User) (storage.User, error) {
 	oid, err := bson.ObjectIDFromHex(user.ID)
 	if err != nil {
-		return storage.UserMongo{}, fmt.Errorf("failed to convert user ID to ObjectID: %v", err)
+		return storage.User{}, fmt.Errorf("failed to convert user ID to ObjectID: %v", err)
 	}
 
-	return storage.UserMongo{
+	return storage.User{
 		ID:       oid,
 		Username: user.Username,
 		Email:    user.Email,
 	}, nil
 }
 
-func ToUserSlice(usersMongo []storage.UserMongo) []model.User {
+func ToModelUserSlice(usersMongo []storage.User) []model.User {
 	var users []model.User
 
 	for _, userMongo := range usersMongo {
-		users = append(users, ToUser(userMongo))
+		users = append(users, ToModelUser(userMongo))
 	}
 
 	return users

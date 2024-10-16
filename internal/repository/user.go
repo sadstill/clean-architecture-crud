@@ -10,40 +10,36 @@ import (
 	"rest-api-crud/internal/converter"
 	"rest-api-crud/internal/model"
 	"rest-api-crud/internal/storage"
-	"rest-api-crud/pkg/logging"
 )
 
 var _ UserRepository = (*userRepo)(nil)
 
 type userRepo struct {
 	collection *mongo.Collection
-	logger     *logging.Logger
 }
 
-func NewUserRepo(database *mongo.Database, collection string, logger *logging.Logger) UserRepository {
+func NewUserRepo(database *mongo.Database, collection string) UserRepository {
 	return &userRepo{
 		collection: database.Collection(collection),
-		logger:     logger,
 	}
 }
 
 func (r *userRepo) Create(ctx context.Context, user model.User) (string, error) {
-	userMongo, err := converter.ToUserMongo(user)
+	storageUser, err := converter.ToStorageUser(user)
 	if err != nil {
 		return "", err
 	}
 
-	result, err := r.collection.InsertOne(ctx, userMongo)
+	result, err := r.collection.InsertOne(ctx, storageUser)
 	if err != nil {
 		return "", fmt.Errorf("failed to create users due to apperror %v", err)
 	}
 
-	r.logger.Debug("Converting InsertId to ObjectId")
 	oid, ok := result.InsertedID.(bson.ObjectID)
 	if ok {
 		return oid.Hex(), nil
 	}
-	r.logger.Trace(user)
+
 	return "", fmt.Errorf("failed to convert objectID to hex")
 }
 
@@ -63,12 +59,12 @@ func (r *userRepo) FindById(ctx context.Context, id string) (u model.User, err e
 		return u, fmt.Errorf("failed to find users by id: %s due to err %s", id, result.Err())
 	}
 
-	var userMongo *storage.UserMongo
-	if err = result.Decode(&userMongo); err != nil {
+	var storageUser *storage.User
+	if err = result.Decode(&storageUser); err != nil {
 		return u, fmt.Errorf("failed to decode users from DB due to apperror: %v", err)
 	}
 
-	u = converter.ToUser(*userMongo)
+	u = converter.ToModelUser(*storageUser)
 
 	return u, nil
 }
@@ -79,23 +75,23 @@ func (r *userRepo) FindAll(ctx context.Context) (u []model.User, err error) {
 		return u, fmt.Errorf("failed to find all users due to apperror: %v", err)
 	}
 
-	var mongoUsers *[]storage.UserMongo
-	if err = cursor.All(ctx, &mongoUsers); err != nil {
+	var storageUsers *[]storage.User
+	if err = cursor.All(ctx, &storageUsers); err != nil {
 		return u, fmt.Errorf("failed to read all documents from cursor. apperror : %v", err)
 	}
 
-	u = converter.ToUserSlice(*mongoUsers)
+	u = converter.ToModelUserSlice(*storageUsers)
 
 	return u, nil
 }
 
 func (r *userRepo) Update(ctx context.Context, user model.User) error {
-	userMongo, err := converter.ToUserMongo(user)
+	storageUser, err := converter.ToStorageUser(user)
 	if err != nil {
 		return err
 	}
 
-	userBytes, err := bson.Marshal(userMongo)
+	userBytes, err := bson.Marshal(storageUser)
 	if err != nil {
 		return fmt.Errorf("failed to marshal users, apperror : %v", err)
 	}
@@ -108,7 +104,7 @@ func (r *userRepo) Update(ctx context.Context, user model.User) error {
 
 	delete(updatedUserObj, "_id")
 
-	filter := bson.M{"_id": userMongo.ID}
+	filter := bson.M{"_id": storageUser.ID}
 	update := bson.M{"$set": updatedUserObj}
 
 	result, err := r.collection.UpdateOne(ctx, filter, update)
@@ -119,8 +115,6 @@ func (r *userRepo) Update(ctx context.Context, user model.User) error {
 	if result.MatchedCount == 0 {
 		return apperror.NotFound
 	}
-
-	r.logger.Tracef("Matched %d documents and Modified %d documents", result.MatchedCount, result.ModifiedCount)
 
 	return nil
 }
@@ -141,8 +135,6 @@ func (r *userRepo) DeleteById(ctx context.Context, id string) error {
 	if result.DeletedCount == 0 {
 		return apperror.NotFound
 	}
-
-	r.logger.Tracef("Deleted %d documents", result.DeletedCount)
 
 	return nil
 }

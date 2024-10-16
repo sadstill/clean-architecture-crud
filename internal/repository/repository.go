@@ -14,7 +14,7 @@ type UserRepository interface {
 }
 
 type AuthorRepository interface {
-	Create(ctx context.Context, author model.Author) (string, error)
+	Create(ctx context.Context, author model.Author) (model.Author, error)
 	FindById(ctx context.Context, id string) (model.Author, error)
 	FindAll(ctx context.Context) ([]model.Author, error)
 	Update(ctx context.Context, author model.Author) error
