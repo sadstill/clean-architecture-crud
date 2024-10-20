@@ -9,7 +9,8 @@ import (
 
 type (
 	LoggingConfig struct {
-		LogLevel string `yaml:"log-level" env:"LOG_LEVEL" env-default:"info"`
+		LogLevel  logging.LogLevel  `yaml:"log-level" env:"LOG_LEVEL" env-default:"info"`
+		LogFormat logging.LogFormat `yaml:"log-format" env:"LOG_FORMAT" env-default:"text"`
 	}
 	ListenConfig struct {
 		Type   string `yaml:"type" env:"LISTEN_TYPE" env-default:"port"`
@@ -47,16 +48,20 @@ var instance *Config
 var once sync.Once
 
 func GetConfig() *Config {
+	logger := logging.GetLogger()
+
+	logger.Info("Loading configuration")
+
 	once.Do(func() {
-		logger := logging.GetLogger()
-		logger.Info("Parsing application configuration started")
 		instance = &Config{}
+		help, _ := cleanenv.GetDescription(instance, nil)
 		if err := cleanenv.ReadConfig("configs/config.yml", instance); err != nil {
-			help, _ := cleanenv.GetDescription(instance, nil)
-			logger.Warn(help)
-			logger.Fatal(err)
+			logger.Error("Failed to load configuration",
+				"error", err,
+				"help", help)
+			panic("Configuration loading failed")
 		}
-		logger.Info("Configuration parsed successfully")
+		logger.Info("Configuration loaded successfully")
 	})
 	return instance
 }
